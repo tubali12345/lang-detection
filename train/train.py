@@ -7,64 +7,8 @@ from data.audio_preprocess import Aud2Mel
 from data.dataloader import ShortAudioDataSet, collate_fn
 from models.resnet import ResNet50LangDetection
 from train_loop import train_loop
-
-
-# class TrainModel:
-#     def __init__(self,
-#                  model,
-#                  train_ds: DataLoader,
-#                  valid_ds: DataLoader,
-#                  num_epochs: int,
-#                  load_epoch: int,
-#                  lr: float,
-#                  max_lr: float,
-#                  pci_start: int = 0.1,
-#                  weights_path: str = None,
-#                  out_dir_path: str = '',
-#                  device: str = 'cuda:0'):
-#         self.model = model
-#         self.model.to(device)
-#         if weights_path is not None:
-#             self.model.load_state_dict(torch.load(weights_path))
-#         self.aud_to_mel = Aud2Mel(Config.feature_dim, Config.sample_rate, 2048, 400, 160)
-#
-#         self.train_ds = train_ds
-#         self.valid_ds = valid_ds
-#
-#         self.num_epochs = num_epochs
-#         self.load_epoch = load_epoch
-#         self.lr = lr
-#         self.max_lr = max_lr
-#         self.pci_start = pci_start
-#
-#         self.out_dir = _make_dir(out_dir_path)
-#         self.device = device
-#
-#         self.optimizer = optimizer
-#         self.loss_fn = loss_fn
-#         self.lr_sched = lr_sched
-#
-#     def _train_loop(self):
-#         for epoch in range(self.load_epoch + 1, self.num_epochs + 1):
-#             self.model.train()
-#             for i, batch in enumerate(tqdm(self.train_ds, desc=f'Training... Epoch {epoch}')):
-#                 x, y = batch
-#                 mel = self.aud_to_mel(x)
-#                 out = self.model(mel.transpose(1, 2).to(self.device))
-#                 loss = self.loss_fn(out, y.to(self.device))
-#                 loss.backward()
-#                 self.optimizer.step()
-#                 self.optimizer.zero_grad()
-#                 self.lr_sched.step()
-#                 if i % 500 == 0:
-#                     print(f'Current loss: {round(loss.item(), 4)}, current LR: {round(self.lr_sched.get_last_lr()[0], 6)}')
-#             validation(self.model, self.valid_ds, self.loss_fn, self.aud_to_mel, self.out_dir, round(self.lr_sched.get_last_lr()[0], 6), self.device)
-#             torch.save(self.model.state_dict(), f'{self.out_dir}/model_{epoch}.pth')
-#
-#     def val_loop(self):
-#         pass
-#
-#
+from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
 
 
 def load_data(train_data_path: str,
@@ -111,6 +55,8 @@ def train(num_epochs: int,
                                                    div_factor=div_factor,
                                                    pct_start=pct_start,
                                                    final_div_factor=div_factor)
+    writer = SummaryWriter(f'runs/{out_dir_path.split("/")[-2]}_{datetime.now().strftime("%b%d_%H-%M-%S")}')
+
     train_loop(model=model,
                num_epochs=num_epochs,
                train_ds=ds,
@@ -119,9 +65,12 @@ def train(num_epochs: int,
                loss_fn=loss_fn,
                optimizer=optimizer,
                lr_sched=lr_sched,
+               writer=writer,
                out_dir_path=out_dir_path,
                load_epoch=load_epoch,
                device=device)
+    writer.flush()
+    writer.close()
 
 
 if __name__ == '__main__':

@@ -4,7 +4,7 @@ import torch
 
 
 # tensorboard
-def validation(model, val_data, loss_fn, aud_to_mel, out_dir, lr, device):
+def validation(model, val_data, loss_fn, aud_to_mel, out_dir, lr, epoch, writer, device):
     model.eval()
     running_loss = 0
     correct = 0
@@ -26,5 +26,7 @@ def validation(model, val_data, loss_fn, aud_to_mel, out_dir, lr, device):
 
     test_loss = running_loss / len(val_data)
     accu = correct / total
+    writer.add_scalar("Loss/validation", loss, epoch)
+    writer.add_scalar("Accuracy/validation", accu, epoch)
     print(f'Val_loss = {test_loss}, val_acc = {accu}')
     Path(f'{out_dir}/val_loss.txt').open('a').write(f'Val_loss = {test_loss}, val_acc = {accu}, lr = {lr}\n')
