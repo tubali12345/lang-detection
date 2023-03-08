@@ -26,6 +26,7 @@ class EvaluateModel:
     def evaluate_short(self, test_data_path: str) -> None:
         predicted = np.array([])
         labels = np.array([])
+        pred_proba = np.array([])
 
         with torch.no_grad():
             for batch in tqdm(load_data(test_data_path), desc='Validating'):
@@ -35,11 +36,15 @@ class EvaluateModel:
                 out = self.model(mel.transpose(1, 2).to(self.device))
                 _, batch_predicted = out.max(1)
 
+                softmax = torch.nn.Softmax(dim=1)
+                pred_proba = np.append(pred_proba, np.array(softmax(out).cpu()))
+
                 predicted = np.append(predicted, np.array(batch_predicted.cpu()))
                 labels = np.append(labels, np.array(y.cpu()))
-            m = Metrics(predicted, labels)
+            m = Metrics(predicted, labels, pred_proba.reshape((-1, 6)))
             print(m.acc_by_lang())
             print(m.accuracy())
+            print(m.topk_accuracy([1, 2, 3, 5]))
 
     def evaluate_long(self,
                       test_data_path,
@@ -76,10 +81,14 @@ class EvaluateModel:
 
 
 class Metrics:
-    def __init__(self, predicted: np.array, labels: np.array):
-        assert predicted.shape == labels.shape, f'Prediction and labels tensor must have the same size, but got {predicted.shape} and {labels.shape}'
+    def __init__(self,
+                 predicted: np.array,
+                 labels: np.array,
+                 pred_proba: np.array = None):
+        assert predicted.shape == labels.shape, f'pred and labels tensor must have the same size, but got {predicted.shape} and {labels.shape}'
         self.predicted = predicted
         self.labels = labels
+        self.pred_proba = pred_proba
 
     def accuracy(self) -> float:
         return np.equal(self.predicted, self.labels).sum() / self.labels.shape[0]
@@ -94,8 +103,9 @@ class Metrics:
                     list(Config.class_dict.keys())[list(Config.class_dict.values()).index(self.labels[i])]] += 1
         return {lang: corr / no_by_lang[lang] for lang, corr in corr_by_lang.items() if no_by_lang[lang] != 0}
 
-    def topk_accuracy(self):
-        pass
+    def topk_accuracy(self, list_k: list):
+        return {k: sum(self.labels[i] in np.argpartition(self.pred_proba[i], -k)[-k:]
+                       for i in range(self.pred_proba.shape[0])) / self.pred_proba.shape[0] for k in list_k}
 
 
 def load_data(data_path: str,
@@ -110,6 +120,6 @@ def load_data(data_path: str,
 if __name__ == '__main__':
     eval_resnet50 = EvaluateModel(ResNet50LangDetection(num_classes=6),
                                   weights_path='/home/turib/lang_detection/weights/ResNet50/weights_03_06/model_2.pth',
-                                  device='cpu')
+                                  device='cuda:2')
     # eval_resnet50.evaluate_long(test_data_path='/home/turib/test_data_long')
     eval_resnet50.evaluate_short('/home/turib/val_data')
