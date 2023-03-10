@@ -1,14 +1,15 @@
+from datetime import date
+
 import torch.nn as nn
 import torch.optim
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from config import Config
 from data.audio_preprocess import Aud2Mel
 from data.dataloader import ShortAudioDataSet, collate_fn
 from models.resnet import ResNet50LangDetection
 from train_loop import train_loop
-from torch.utils.tensorboard import SummaryWriter
-from datetime import datetime
 
 
 def load_data(train_data_path: str,
@@ -20,14 +21,12 @@ def load_data(train_data_path: str,
     ds = DataLoader(ShortAudioDataSet(train_data_path, with_augmentation=True), batch_size=batch_size, shuffle=True,
                     collate_fn=collate_fn, drop_last=False, pin_memory=False, num_workers=num_workers,
                     prefetch_factor=prefetch_factor)
-    valid_ds = DataLoader(ShortAudioDataSet(val_data_path, random_sample=False, no_samples_per_class=10**5),
+    valid_ds = DataLoader(ShortAudioDataSet(val_data_path, random_sample=False, no_samples_per_class=10 ** 5),
                           batch_size=batch_size, shuffle=False, collate_fn=collate_fn, pin_memory=False,
                           num_workers=num_workers, prefetch_factor=prefetch_factor)
     return ds, valid_ds
 
 
-# add option to train model from a certain weights
-# add tensorboard
 def train(num_epochs: int,
           lr: float,
           max_lr: float,
@@ -55,7 +54,7 @@ def train(num_epochs: int,
                                                    div_factor=div_factor,
                                                    pct_start=pct_start,
                                                    final_div_factor=div_factor)
-    writer = SummaryWriter(f'runs/{out_dir_path.split("/")[-2]}_{datetime.now().strftime("%b%d_%H-%M-%S")}')
+    writer = SummaryWriter(f'runs/{out_dir_path.split("/")[-2]}_{date.today()}')
 
     train_loop(model=model,
                num_epochs=num_epochs,
