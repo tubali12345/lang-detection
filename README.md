@@ -45,3 +45,23 @@ The audio files have been converted to wav format (sample_rate=16000) and split 
 Audio augmentation has been used so that the model becomes more robust to noise and data anomaly. (pitch shift, volume change, roll and telephone simulation)
 
 ### Training:
+
+...
+
+### TensorBoard:
+
+Tracking the training metrics using TensorBoard
+
+**How to use:**
+
+1. Connect to the server using:
+
+    **ssh -L 16006:127.0.0.1:6006 192.168.8.13**
+
+2. Launch TensorBoard:
+
+    **tensorboard --logdir=/home/turib/lang_detection/train/runs/ --port=6006**
+
+3.  Open your browser and enter:
+
+    **127.0.0.1:16006**
