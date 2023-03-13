@@ -47,6 +47,8 @@ def train_loop(model,
             if i % mini_batch == 0:
                 writer.add_scalar("Accuracy/train", correct / total, epoch)
                 writer.add_scalar("Loss/train", loss, epoch)
-                print(f'Current loss: {round(loss.item(), 4)}, Current acc: {round(correct/total, 4)}, current LR: {round(lr_sched.get_last_lr()[0], 6)}')
+                print(f'Current loss: {round(loss.item(), 4)}, '
+                      f'Current acc: {round(correct/total, 4)}, '
+                      f'current LR: {round(lr_sched.get_last_lr()[0], 6)}')
         validation(model, valid_ds, loss_fn, aud_to_mel, out_dir, round(lr_sched.get_last_lr()[0], 6), epoch, writer, device)
         torch.save(model.state_dict(), f'{out_dir}/model_{epoch}.pth')

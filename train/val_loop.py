@@ -3,7 +3,6 @@ from pathlib import Path
 import torch
 
 
-# tensorboard
 def validation(model, val_data, loss_fn, aud_to_mel, out_dir, lr, epoch, writer, device):
     model.eval()
     running_loss = 0
