@@ -3,7 +3,15 @@ from pathlib import Path
 import torch
 
 
-def validation(model, val_data, loss_fn, aud_to_mel, out_dir, lr, epoch, writer, device):
+def validation(model,
+               val_data,
+               loss_fn,
+               aud_to_mel,
+               out_dir,
+               lr,
+               epoch,
+               writer,
+               device):
     model.eval()
     running_loss = 0
     correct = 0

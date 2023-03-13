@@ -50,5 +50,13 @@ def train_loop(model,
                 print(f'Current loss: {round(loss.item(), 4)}, '
                       f'Current acc: {round(correct/total, 4)}, '
                       f'current LR: {round(lr_sched.get_last_lr()[0], 6)}')
-        validation(model, valid_ds, loss_fn, aud_to_mel, out_dir, round(lr_sched.get_last_lr()[0], 6), epoch, writer, device)
+        validation(model=model,
+                   val_data=valid_ds,
+                   loss_fn=loss_fn,
+                   aud_to_mel=aud_to_mel,
+                   out_dir=out_dir,
+                   lr=round(lr_sched.get_last_lr()[0], 6),
+                   epoch=epoch,
+                   writer=writer,
+                   device=device)
         torch.save(model.state_dict(), f'{out_dir}/model_{epoch}.pth')
