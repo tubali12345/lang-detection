@@ -18,10 +18,12 @@ def load_data(train_data_path: str,
               prefetch_factor: int = 4,
               num_workers: int = 1
               ) -> tuple:
-    ds = DataLoader(ShortAudioDataSet(train_data_path, with_augmentation=True), batch_size=batch_size, shuffle=True,
-                    collate_fn=collate_fn, drop_last=False, pin_memory=False, num_workers=num_workers,
-                    prefetch_factor=prefetch_factor)
-    valid_ds = DataLoader(ShortAudioDataSet(val_data_path, random_sample=False, no_samples_per_class=10 ** 5),
+    ds = DataLoader(ShortAudioDataSet(train_data_path, with_augmentation=True,
+                                      no_samples_per_class=Config.train_params['no_samples_per_class_train']),
+                    batch_size=batch_size, shuffle=True, collate_fn=collate_fn, drop_last=False,
+                    pin_memory=False, num_workers=num_workers, prefetch_factor=prefetch_factor)
+    valid_ds = DataLoader(ShortAudioDataSet(val_data_path, random_sample=False,
+                                            no_samples_per_class=Config.train_params['no_samples_per_class_val']),
                           batch_size=batch_size, shuffle=False, collate_fn=collate_fn, pin_memory=False,
                           num_workers=num_workers, prefetch_factor=prefetch_factor)
     return ds, valid_ds
@@ -37,8 +39,8 @@ def train(num_epochs: int,
           load_epoch: int = 0,
           weights_path: str = None,
           device: str = 'cuda:0'):
-    ds, valid_ds = load_data(train_data_path='/home/turib/train_data',
-                             val_data_path='/home/turib/train_data_val',
+    ds, valid_ds = load_data(train_data_path=Config.train_params['train_data_path'],
+                             val_data_path=Config.train_params['val_data_path'],
                              batch_size=batch_size)
 
     model = ResNet50LangDetection(num_classes=num_classes).to(device)
@@ -73,10 +75,13 @@ def train(num_epochs: int,
 
 
 if __name__ == '__main__':
-    train(num_epochs=100,
-          lr=1e-4,
-          max_lr=3e-4,
-          batch_size=64,
-          num_classes=6,
-          out_dir_path=f'/home/turib/lang_detection/weights/ResNet50/weights_03_08',
-          device='cuda:0')
+    train(num_epochs=Config.train_params['num_epochs'],
+          lr=Config.train_params['lr'],
+          max_lr=Config.train_params['max_lr'],
+          batch_size=Config.train_params['batch_size'],
+          num_classes=Config.train_params['num_classes'],
+          out_dir_path=f'{Config.train_params["out_dir_path"]}_{date.today()}',
+          device=Config.train_params['device'],
+          weights_path=Config.train_params['weights_path'],
+          load_epoch=Config.train_params['load_epoch'],
+          pct_start=Config.train_params['pct_start'])
