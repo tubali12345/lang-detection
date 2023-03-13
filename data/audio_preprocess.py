@@ -35,6 +35,8 @@ def write_audio(audio, wav_path_str, sample_rate):
 
 
 def split_audio(audio, chunk_length: int = 8):
+    if len(audio) == Config.sample_rate * chunk_length:
+        return [audio]
     return [audio[i:i + Config.sample_rate * chunk_length] for i in
             range(0, len(audio) - Config.sample_rate * chunk_length, Config.sample_rate * chunk_length)]
 
