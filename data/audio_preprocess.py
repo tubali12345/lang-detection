@@ -100,7 +100,7 @@ class Aud2Mel(torch.nn.Module):
 
 
 if __name__ == '__main__':
-    path = "/home/turib/test_data_long"
+    path = "/home/turib/train_data"
     processes = []
     for directory in Path(path).glob("*/"):
         if directory.name in ['es', 'en', 'hu', 'tr', 'fr', 'de']:
