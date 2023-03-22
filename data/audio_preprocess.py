@@ -38,7 +38,7 @@ def split_audio(audio, chunk_length: int = 8):
     if len(audio) == Config.sample_rate * chunk_length:
         return [audio]
     return [audio[i:i + Config.sample_rate * chunk_length] for i in
-            range(0, len(audio) - Config.sample_rate * chunk_length, Config.sample_rate * chunk_length)]
+            range(0, len(audio) - Config.sample_rate * chunk_length + 1, Config.sample_rate * chunk_length)]
 
 
 def write_all_audio(audios: list, dest_audio_path):
@@ -58,10 +58,12 @@ def split_all_wav_from_path(path: str, out_path: str):
                 #         break
                 try:
                     audio = load_audio(str(wav))
-                    if len(audio) > Config.sample_rate * 9:
-                        audios = split_audio(audio)
+                    if len(audio) > Config.sample_rate * 60 * 5:
+                        audios = split_audio(audio, 60 * 5)
                         write_all_audio(audios, f'{out_dir}/{wav.name}')
-                        Path(f'{out_dir}/archive.txt').open('a').write(f'{wav.name}\n')
+                        # Path(f'{out_dir}/archive.txt').open('a').write(f'{wav.name}\n')
+                        wav.unlink()
+                    elif len(audio) < Config.sample_rate * 8:
                         wav.unlink()
                 except Exception as e:
                     print(wav, e)
@@ -102,14 +104,13 @@ class Aud2Mel(torch.nn.Module):
 
 
 if __name__ == '__main__':
-    path = "/home/turib/train_data"
+    path = "/home/turib/test_data_long"
     processes = []
     for directory in Path(path).glob("*/"):
-        if directory.name in ['es', 'en', 'hu', 'tr', 'fr', 'de']:
+        if directory.name in ['es', 'en', 'fr', 'de']:
             p = Process(target=split_all_wav_from_path,
-                        args=(f"/home/turib/train_data/{directory.name}_long", f"/home/turib/train_data/{directory.name}"))
+                        args=(f"{path}/{directory.name}", f"{path}/{directory.name}"))
             p.start()
             processes.append(p)
     for p in processes:
         p.join()
-    remove_short(path)
