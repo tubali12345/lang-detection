@@ -8,7 +8,6 @@ def detect_language(model, audio_path: str):
     audio = load_audio(audio_path)
 
     mel = log_mel_spectrogram(audio, padding=N_SAMPLES)
-
     mel_segment = pad_or_trim(mel, N_FRAMES).to(model.device).to(torch.float16)
 
     _, probs = model.detect_language(mel_segment)

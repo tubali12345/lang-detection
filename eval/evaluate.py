@@ -9,7 +9,7 @@ from tqdm import tqdm
 from config import Config
 from data.audio_preprocess import Aud2Mel, load_audio, split_audio
 from data.dataloader import ShortAudioDataSet, collate_fn
-from metrics import Metrics, get_lang_by_id
+from metrics import Metrics, get_lang_by_id, print_and_write_metrics
 from models import call_whisper
 from models.resnet import ResNet50LangDetection
 from whisper.whisper import load_model
@@ -112,21 +112,6 @@ def load_data(data_path: str,
     return DataLoader(ShortAudioDataSet(data_path, random_sample=False, no_samples_per_class=no_samples_per_class),
                       batch_size=batch_size, shuffle=False, collate_fn=collate_fn,
                       pin_memory=False, num_workers=num_workers, prefetch_factor=prefetch_factor)
-
-
-def print_and_write_metrics(accuracy: float,
-                            acc_by_lang: float,
-                            model_name: str,
-                            file_path: str = f'/home/turib/lang_detection/eval/scores_{date.today()}.txt',
-                            print_only: bool = False):
-    print(f'Model: {model_name} \n'
-          f'Accuracy: {accuracy} \n'
-          f'Accuracy by language: {acc_by_lang}')
-    if not print_only:
-        Path(file_path).open('a').write(f'{model_name} \n'
-                                        f'Accuracy: {accuracy}'
-                                        f' \n Accuracy by language: '
-                                        f' \n {acc_by_lang} \n')
 
 
 if __name__ == '__main__':
