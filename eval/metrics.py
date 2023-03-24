@@ -1,7 +1,6 @@
 import torch
 
 from config import Config
-from evaluate import get_lang_by_id
 
 
 class Metrics:
@@ -23,3 +22,7 @@ class Metrics:
             if self.predicted[i] == self.labels[i]:
                 corr_by_lang[get_lang_by_id(self.labels[i])] += 1
         return {lang: corr_by_lang[lang] / no_by_lang[lang] for lang in Config.class_dict.keys()}
+
+
+def get_lang_by_id(lang_id: int) -> str:
+    return list(Config.class_dict.keys())[list(Config.class_dict.values()).index(lang_id)]
