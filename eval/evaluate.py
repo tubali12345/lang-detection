@@ -9,25 +9,36 @@ from tqdm import tqdm
 from config import Config
 from data.audio_preprocess import Aud2Mel, load_audio, split_audio
 from data.dataloader import ShortAudioDataSet, collate_fn
-from metrics import Metrics
+from metrics import Metrics, get_lang_by_id
+from models import call_whisper
 from models.resnet import ResNet50LangDetection
+from whisper.whisper import load_model
 
 
 class EvaluateModel:
     def __init__(self,
                  model,
-                 weights_path: str,
-                 device: str):
-        self.model = model
-        self.model.to(device)
-        self.model.load_state_dict(torch.load(weights_path))
-        self.model.eval()
-        self.aud_to_mel = Aud2Mel(Config.feature_dim, Config.sample_rate, 2048, 400, 160)
+                 model_name: str = None,
+                 weights_path: str = None,
+                 device: str = 'cuda:0'):
+        if model == "whisper":
+            self.model = load_model('large', device=device)
+            self.model_name = "whisper"
+        else:
+            self.model = model
+            self.model_name = model_name
+            self.model.to(device)
+            self.model.load_state_dict(torch.load(weights_path))
+            self.model.eval()
+            self.aud_to_mel = Aud2Mel(Config.feature_dim, Config.sample_rate, 2048, 400, 160)
         self.device = device
 
-    def evaluate_short(self, test_data_path: str, no_samples_per_class: int = 10 ** 20) -> tuple:
+    def evaluate_short(self, test_data_path: str, no_samples_per_class: int = 10 ** 20) -> tuple or str:
         pred = torch.Tensor([]).to(self.device)
         labels = torch.Tensor([]).to(self.device)
+
+        if self.model_name == "whisper":
+            return 'For model whisper use method evaluate_long'
 
         with torch.no_grad():
             for batch in tqdm(load_data(test_data_path, no_samples_per_class=no_samples_per_class), desc='Validating'):
@@ -55,11 +66,18 @@ class EvaluateModel:
             for language in Path(test_data_path).glob('*/'):
                 for aud_path in tqdm(list(map(str, Path(language).rglob(f'*.{audio_format}')))[:no_samples_per_class]):
                     audio_class = aud_path.split('/')[-3]
-                    predicted_class = self.predict_from_file(aud_path, batch_audio_chunk)
+                    if self.model_name == "whisper":
+                        predicted_class = call_whisper.detect_language(model=self.model, audio_path=aud_path)
+                    else:
+                        predicted_class = self.predict_from_file(aud_path, batch_audio_chunk)
                     if predicted_class is None:
-                        print('Incorrect audio')
-                    predicted = torch.cat(
-                        (predicted, torch.Tensor([Config.class_dict[predicted_class]]).to(self.device)), dim=0)
+                        continue
+                    try:
+                        predicted = torch.cat(
+                            (predicted, torch.Tensor([Config.class_dict[predicted_class]]).to(self.device)), dim=0)
+                    except KeyError:  # whisper predicts language that is not in our languages
+                        predicted = torch.cat(
+                            (predicted, torch.Tensor([6]).to(self.device)), dim=0)
                     labels = torch.cat((labels, torch.Tensor([Config.class_dict[audio_class]]).to(self.device)), dim=0)
 
             metrics = Metrics(predicted, labels)
@@ -70,7 +88,7 @@ class EvaluateModel:
         try:
             audio_chunks = torch.cat([torch.unsqueeze(torch.FloatTensor(aud), dim=0) for aud in split_audio(audio)])
         except Exception as e:
-            print(audio_path, e)
+            print(f'Incorrect audio {audio_path}, exception: {e}')
             return
 
         predicted = torch.Tensor([]).to(self.device)
@@ -99,26 +117,28 @@ def load_data(data_path: str,
 def print_and_write_metrics(accuracy: float,
                             acc_by_lang: float,
                             model_name: str,
-                            file_path: str = f'/home/turib/lang_detection/eval/scores_{date.today()}.txt'):
+                            file_path: str = f'/home/turib/lang_detection/eval/scores_{date.today()}.txt',
+                            print_only: bool = False):
     print(f'Model: {model_name} \n'
           f'Accuracy: {accuracy} \n'
           f'Accuracy by language: {acc_by_lang}')
-    Path(file_path).open('a').write(f'{model_name} \n'
-                                    f'Accuracy: {accuracy}'
-                                    f' \n Accuracy by language: '
-                                    f' \n {acc_by_lang} \n')
-
-
-def get_lang_by_id(lang_id: int) -> str:
-    return list(Config.class_dict.keys())[list(Config.class_dict.values()).index(lang_id)]
+    if not print_only:
+        Path(file_path).open('a').write(f'{model_name} \n'
+                                        f'Accuracy: {accuracy}'
+                                        f' \n Accuracy by language: '
+                                        f' \n {acc_by_lang} \n')
 
 
 if __name__ == '__main__':
-    for i in [7]:
-        eval_resnet50 = EvaluateModel(ResNet50LangDetection(num_classes=len(Config.class_dict)),
-                                      weights_path=f'/home/turib/lang_detection/weights/ResNet50/weights_03_08/model_{i}.pth',
-                                      device='cuda:0')
-        acc, acc_lang = eval_resnet50.evaluate_long(test_data_path='/home/turib/test_data_long',
-                                                    no_samples_per_class=1000)
-        print_and_write_metrics(acc, acc_lang, f'ResNet50 epoch: {i}')
-        # eval_resnet50.evaluate_short('/home/turib/val_data')
+    # for i in [8, 7]:
+    #     eval_resnet50 = EvaluateModel(ResNet50LangDetection(num_classes=len(Config.class_dict)),
+    #                                   weights_path=f'/home/turib/lang_detection/weights/ResNet50/weights_03_08/model_{i}.pth',
+    #                                   device='cuda:2')
+    #     acc, acc_lang = eval_resnet50.evaluate_long(test_data_path='/home/turib/test_data_long',
+    #                                                 no_samples_per_class=1000)
+    #     print_and_write_metrics(acc, acc_lang, f'ResNet50 epoch-{i}')
+    #     eval_resnet50.evaluate_short('/home/turib/val_data')
+
+    eval_whisper = EvaluateModel(model='whisper', device='cuda:2')
+    acc, acc_lang = eval_whisper.evaluate_long(test_data_path='/home/turib/test_data_long', no_samples_per_class=10)
+    print_and_write_metrics(acc, acc_lang, eval_whisper.model_name, print_only=True)
