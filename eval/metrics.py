@@ -1,3 +1,6 @@
+from datetime import date
+from pathlib import Path
+
 import torch
 
 from config import Config
@@ -26,3 +29,18 @@ class Metrics:
 
 def get_lang_by_id(lang_id: int) -> str:
     return list(Config.class_dict.keys())[list(Config.class_dict.values()).index(lang_id)]
+
+
+def print_and_write_metrics(accuracy: float,
+                            acc_by_lang: float,
+                            model_name: str,
+                            file_path: str = f'/home/turib/lang_detection/eval/scores_{date.today()}.txt',
+                            print_only: bool = False):
+    print(f'Model: {model_name} \n'
+          f'Accuracy: {accuracy} \n'
+          f'Accuracy by language: {acc_by_lang}')
+    if not print_only:
+        Path(file_path).open('a').write(f'{model_name} \n'
+                                        f'Accuracy: {accuracy}'
+                                        f' \n Accuracy by language: '
+                                        f' \n {acc_by_lang} \n')
